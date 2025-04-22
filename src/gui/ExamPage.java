@@ -1,19 +1,17 @@
 package gui;
 
-import model.Exam;
-import model.Option;
-import model.Question;
-import services.ExamService;
-import services.ResponseService;
-
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
 import java.util.List;
 import java.util.Timer;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.swing.*;
+import model.Exam;
+import model.Option;
+import model.Question;
+import services.ExamService;
+import services.ResponseService;
 
 public class ExamPage extends JFrame {
     private final String userId;
@@ -75,159 +73,91 @@ public class ExamPage extends JFrame {
     }
     
     private void setupUI() {
-        // Get exam details
-        Exam exam = examService.getExamById(examId);
-        if (exam == null) {
-            JOptionPane.showMessageDialog(this, "Exam not found!");
-            this.dispose();
-            return;
-        }
-        
-        // Configure frame
-        setTitle("Virtual Examination System - Exam");
-        setSize(900, 600);
-        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        setTitle("Exam - " + examId);
+        setSize(1000, 700);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
         
-        // Prevent closing the window directly
-        addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent e) {
-                isSubmitButtonClicked = true; // Set flag to prevent triggering anti-cheat
-                int confirm = JOptionPane.showConfirmDialog(
-                        ExamPage.this,
-                        "Are you sure you want to submit the exam and exit?",
-                        "Submit Confirmation",
-                        JOptionPane.YES_NO_OPTION);
-                
-                if (confirm == JOptionPane.YES_OPTION) {
-                    submitExam();
-                } else {
-                    isSubmitButtonClicked = false; // Reset flag if canceled
-                }
-            }
-        });
+        // Main panel with white background
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(Color.WHITE);
         
-        // Set layout
-        setLayout(new BorderLayout());
-        
-        // Header Panel
+        // Header panel with teal background
         JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.setBackground(new Color(73, 125, 116)); // Teal green color
-        headerPanel.setPreferredSize(new Dimension(900, 80));
+        headerPanel.setBackground(new Color(73, 125, 116));
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(15, 25, 15, 25));
         
-        // Marks Label
-        marksLabel = new JLabel("Marks: ");
-        marksLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        marksLabel.setForeground(Color.WHITE);
-        marksLabel.setBorder(new EmptyBorder(0, 20, 0, 0));
-        headerPanel.add(marksLabel, BorderLayout.WEST);
-        
-        // Right side panel for Subject and Timer
-        JPanel rightHeaderPanel = new JPanel(new GridLayout(2, 1));
-        rightHeaderPanel.setBackground(new Color(73, 125, 116)); // Teal green color
-        
-        // Subject label
-        subjectLabel = new JLabel("Subject: " + exam.getSubject());
-        subjectLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        subjectLabel.setForeground(Color.WHITE);
-        subjectLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        subjectLabel.setBorder(new EmptyBorder(0, 0, 0, 20));
-        
-        // Timer label
-        timerLabel = new JLabel("00:00");
-        timerLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        // Timer and subject labels
+        timerLabel = new JLabel("Time Remaining: 00:00");
+        timerLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
         timerLabel.setForeground(Color.WHITE);
-        timerLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        timerLabel.setBorder(new EmptyBorder(0, 0, 0, 20));
+        headerPanel.add(timerLabel, BorderLayout.WEST);
         
-        rightHeaderPanel.add(subjectLabel);
-        rightHeaderPanel.add(timerLabel);
-        headerPanel.add(rightHeaderPanel, BorderLayout.EAST);
+        Exam exam = examService.getExamById(examId);
+        subjectLabel = new JLabel("Subject: " + (exam != null ? exam.getSubject() : ""));
+        subjectLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        subjectLabel.setForeground(Color.WHITE);
+        headerPanel.add(subjectLabel, BorderLayout.EAST);
         
-        // Content Panel
-        JPanel contentPanel = new JPanel();
-        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
-        contentPanel.setBorder(new EmptyBorder(20, 40, 20, 40));
-        contentPanel.setBackground(new Color(234, 233, 232)); // Light gray background
+        // Content panel
+        JPanel contentPanel = new JPanel(new BorderLayout());
+        contentPanel.setBackground(Color.WHITE);
+        contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 40, 20, 40));
         
-        // Question Label
+        // Question panel
+        JPanel questionPanel = new JPanel(new BorderLayout());
+        questionPanel.setBackground(Color.WHITE);
+        
         questionTextLabel = new JLabel();
-        questionTextLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        questionTextLabel.setForeground(new Color(73, 125, 116)); // Teal green color
-        questionTextLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        questionTextLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        questionTextLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
+        questionPanel.add(questionTextLabel, BorderLayout.NORTH);
         
-        // Options Panel
         optionsPanel = new JPanel();
         optionsPanel.setLayout(new BoxLayout(optionsPanel, BoxLayout.Y_AXIS));
-        optionsPanel.setBackground(new Color(234, 233, 232)); // Light gray background
-        optionsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        optionsPanel.setBackground(Color.WHITE);
+        questionPanel.add(optionsPanel, BorderLayout.CENTER);
         
-        contentPanel.add(questionTextLabel);
-        contentPanel.add(Box.createVerticalStrut(20));
-        contentPanel.add(optionsPanel);
+        contentPanel.add(questionPanel, BorderLayout.CENTER);
         
-        // Footer Panel
-        JPanel footerPanel = new JPanel(new BorderLayout());
-        footerPanel.setBorder(new EmptyBorder(10, 40, 20, 40));
-        footerPanel.setBackground(new Color(234, 233, 232)); // Light gray background
-        
-        // Navigation buttons panel
-        JPanel navigationPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        navigationPanel.setBackground(new Color(234, 233, 232)); // Light gray background
+        // Navigation panel
+        JPanel navPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        navPanel.setBackground(Color.WHITE);
         
         previousButton = new JButton("Previous");
-        previousButton.setPreferredSize(new Dimension(120, 45));
-        previousButton.setBackground(new Color(231, 76, 60)); // Red color
-        previousButton.setForeground(Color.WHITE);
-        previousButton.setOpaque(true);
-        previousButton.setContentAreaFilled(true);
-        previousButton.setFocusPainted(false);
-        previousButton.setBorderPainted(false);
-        previousButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        previousButton.addActionListener(e -> navigateToPreviousQuestion());
-        
         nextButton = new JButton("Next");
-        nextButton.setPreferredSize(new Dimension(120, 45));
-        nextButton.setBackground(new Color(46, 204, 113)); // Green color
-        nextButton.setForeground(Color.WHITE);
-        nextButton.setOpaque(true);
-        nextButton.setContentAreaFilled(true);
-        nextButton.setFocusPainted(false);
-        nextButton.setBorderPainted(false);
-        nextButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        submitButton = new JButton("Submit Exam");
+        
+        // Style buttons
+        for (JButton button : new JButton[]{previousButton, nextButton, submitButton}) {
+            button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+            button.setBackground(new Color(73, 125, 116));
+            button.setForeground(Color.WHITE);
+            button.setBorderPainted(false);
+            button.setFocusPainted(false);
+            button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            button.setPreferredSize(new Dimension(120, 40));
+        }
+        
+        navPanel.add(previousButton);
+        navPanel.add(nextButton);
+        navPanel.add(submitButton);
+        
+        contentPanel.add(navPanel, BorderLayout.SOUTH);
+        
+        // Add all panels to main panel
+        mainPanel.add(headerPanel, BorderLayout.NORTH);
+        mainPanel.add(contentPanel, BorderLayout.CENTER);
+        
+        add(mainPanel);
+        
+        // Add action listeners
+        previousButton.addActionListener(e -> navigateToPreviousQuestion());
         nextButton.addActionListener(e -> navigateToNextQuestion());
-        
-        navigationPanel.add(previousButton);
-        navigationPanel.add(Box.createHorizontalStrut(10));
-        navigationPanel.add(nextButton);
-        
-        // Submit button panel
-        JPanel submitPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        submitPanel.setBackground(new Color(234, 233, 232)); // Light gray background
-        
-        submitButton = new JButton("Submit");
-        submitButton.setPreferredSize(new Dimension(120, 45));
-        submitButton.setBackground(new Color(46, 204, 113)); // Green color
-        submitButton.setForeground(Color.WHITE);
-        submitButton.setOpaque(true);
-        submitButton.setContentAreaFilled(true);
-        submitButton.setFocusPainted(false);
-        submitButton.setBorderPainted(false);
-        submitButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         submitButton.addActionListener(e -> submitExam());
         
-        submitPanel.add(submitButton);
-        
-        footerPanel.add(navigationPanel, BorderLayout.WEST);
-        footerPanel.add(submitPanel, BorderLayout.EAST);
-        
-        add(headerPanel, BorderLayout.NORTH);
-        add(contentPanel, BorderLayout.CENTER);
-        add(footerPanel, BorderLayout.SOUTH);
-        
-        // Load the first question
+        // Load first question
         loadQuestion(currentQuestionIndex);
     }
     
